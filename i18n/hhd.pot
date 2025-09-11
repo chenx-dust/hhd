@@ -1450,6 +1450,20 @@ msgstr ""
 "Uses the new handheld Steam Input profile. May have bugs, especially when it "
 "comes to gyro."
 
+#. Setting: Enable Gyro on Demand
+#. Field: title
+msgid "Enable Gyro on Demand"
+msgstr "Enable Gyro on Demand"
+
+#. Setting: Enable Gyro on Demand
+#. Field: hint
+msgid ""
+"Poll IMU on demand. Stop polling IMU when not needed to save battery life."
+"This may decrease CPU usage in idle state."
+msgstr ""
+"Poll IMU on demand. Stop polling IMU when not needed to save battery life."
+"This may decrease CPU usage in idle state."
+
 #. Setting: Gyro Output Sync
 #. Field: title
 msgid "Gyro Output Sync"

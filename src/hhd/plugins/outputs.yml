@@ -112,13 +112,13 @@ modes:
         hint: >-
           Makes the left paddle bring up a keyboard and the right paddle bring
           up the overlay.
-      gryo_on_demand:
+      gyro_on_demand:
         type: bool
         title: Enable Gyro on Demand
         tags: [non-essential]
         hint: >-
           Poll IMU on demand. Stop polling IMU when not needed to save battery life.
-          This may highly decrease CPU usage in idle state.
+          This may decrease CPU usage in idle state.
         default: True
       sync_gyro:
         type: bool

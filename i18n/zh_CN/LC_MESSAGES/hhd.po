@@ -1433,6 +1433,19 @@ msgid ""
 " it comes to gyro."
 msgstr "新的 Steam 输入配置（掌机模式）。可能会有问题，特别是在陀螺仪方面"
 
+#. Setting: Enable Gyro on Demand
+#. Field: title
+msgid "Enable Gyro on Demand"
+msgstr "按需启用陀螺仪"
+
+#. Setting: Enable Gyro on Demand
+#. Field: hint
+msgid ""
+"Poll IMU on demand. Stop polling IMU when not needed to save battery life."
+"This may decrease CPU usage in idle state."
+msgstr ""
+"按需轮询 IMU。在不需要时停止轮询 IMU，以节省电量。可能减少空闲状态下的 CPU 占用。"
+
 #. Setting: Gyro Output Sync
 #. Field: title
 msgid "Gyro Output Sync"
