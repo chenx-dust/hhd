@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Callable, Literal, Mapping, Sequence
 
 import os
 from ..controller.base import Consumer, Producer, RgbMode, RgbSettings, RgbZones
@@ -43,6 +43,7 @@ def get_outputs(
     touchpad_enable: Literal["disabled", "gamemode", "always"] | None = None,
     rgb_init_times: int | None = None,
     extra_buttons: Literal["none", "dual", "quad"] = "dual",
+    motion_toggle: Callable[[bool], None] | None = None,
 ) -> tuple[Sequence[Producer], Sequence[Consumer], Mapping[str, Any]]:
     producers = []
     consumers = []
@@ -76,6 +77,7 @@ def get_outputs(
     uses_leds = False
     noob_mode = False
     flip_z = False
+    gyro_on_demand = False
 
     if controller_disabled:
         controller = "hidden"
@@ -135,10 +137,12 @@ def get_outputs(
                 pid=0x12FF,
                 touchpad=uses_touch,
                 sync_gyro=conf.get("hori_steam.sync_gyro", True),
+                motion_toggle=motion_toggle,
             )
             producers.append(d)
             consumers.append(d)
             noob_mode = conf.get("hori_steam.noob_mode", False)
+            gyro_on_demand = conf.get("hori_steam.gyro_on_demand", False)
             has_qam = True
         case "uinput" | "xbox_elite" | "joycon_pair" | "hori_steam":
             Dualsense.close_cached()
@@ -277,6 +281,7 @@ def get_outputs(
             "nintendo_qam": nintendo_qam,
             "uses_motion": motion,
             "uses_dual_motion": dual_motion,
+            "gyro_on_demand": gyro_on_demand,
             "noob_mode": noob_mode,
             "has_qam": has_qam,
             "supports_qam": not controller_disabled and controller != "hidden",

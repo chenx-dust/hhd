@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import defaultdict
-from typing import Sequence, cast
+from typing import Callable, Sequence, cast
 
 from hhd.controller import (
     Consumer,
@@ -54,6 +54,7 @@ class SteamdeckController(Producer, Consumer):
         name,
         touchpad: bool = False,
         sync_gyro: bool = True,
+        motion_toggle: Callable[[bool], None] | None = None,
     ) -> None:
         self.available = False
         self.dev = None
@@ -62,6 +63,7 @@ class SteamdeckController(Producer, Consumer):
         self.name = name
         self.sync_gyro = sync_gyro
         self.enable_touchpad = touchpad
+        self.motion_toggle = motion_toggle
         self.report = bytearray(64)
         self.i = 0
         self.last_rep = None
@@ -112,7 +114,7 @@ class SteamdeckController(Producer, Consumer):
         self.start = curr
         self.touchpad_down = curr
         self.last_imu = curr
-        self.imu_failed = False
+        self.imu_failed = True
 
         logger.info(f"Starting '{self.name}'.")
         assert self.fd
@@ -248,16 +250,33 @@ class SteamdeckController(Producer, Consumer):
                             # logger.info(f"SD Received Haptics ({time.perf_counter()*1000:.3f}ms):\n{ev['data'].hex().rstrip(' 0')}")
                             pass
                         case 0x87:
+                            rnum = ev["data"][4]
+                            for i in range(0, rnum, 3):
+                                rtype = ev["data"][5 + i]
+                                rdata = int.from_bytes(
+                                    ev["data"][6 + i : 8 + i],
+                                    byteorder="little",
+                                    signed=False,
+                                )
+                            # SETTING_STABILIZER_ENABLED
+                            if self.motion_toggle and rtype == 80:
+                                match rdata:
+                                    case 0xaa00:
+                                        if DEBUG_MODE:
+                                            logger.info("IMU activated")
+                                        self.motion_toggle(True)
+                                    case 0xbb00:
+                                        if DEBUG_MODE:
+                                            logger.info("IMU deactivated")
+                                        self.motion_toggle(False)
+                                        # Force breaking gyro sync to prevent controller freeze
+                                        self.last_imu = time.perf_counter() - MAX_IMU_SYNC_DELAY
+                                        self.imu_failed = True
+                                    case _:
+                                        logger.warning(f"SD Unknown stabilizer enabled setting: {rdata:02x}")
                             if DEBUG_MODE:
-                                rnum = ev["data"][4]
                                 ss = []
                                 for i in range(0, rnum, 3):
-                                    rtype = ev["data"][5 + i]
-                                    rdata = int.from_bytes(
-                                        ev["data"][6 + i : 8 + i],
-                                        byteorder="little",
-                                        signed=False,
-                                    )
                                     ss.append(
                                         f"{SD_SETTINGS[rtype] if rtype < len(SD_SETTINGS) else "UKNOWN"} ({rtype:02d}): {rdata:02x}"
                                     )
