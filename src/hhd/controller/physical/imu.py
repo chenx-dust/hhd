@@ -4,7 +4,7 @@ import select
 from threading import Event as TEvent, Thread
 from typing import Any, Generator, Literal, NamedTuple, Sequence
 
-from hhd.controller import Axis, Event, Producer
+from hhd.controller import Axis, DEBUG_MODE, Event, Producer
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,8 @@ def find_sensor(sensors: Sequence[str]):
             name = f.read().strip()
 
         if any(sensor in name for sensor in sensors):
-            logger.info(f"Found device '{name}' at\n{sensor_dir}")
+            if DEBUG_MODE:
+                logger.info(f"Found device '{name}' at\n{sensor_dir}")
             return sensor_dir, name
 
     return None, None
