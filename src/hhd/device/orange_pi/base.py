@@ -92,16 +92,13 @@ def controller_loop(
     debug = DEBUG_MODE
 
     # Output
-    motion_toggle = lambda x: None
     d_producers, d_outs, d_params = get_outputs(
         conf["controller_mode"],
         None,
         conf["imu"].to(bool),
         emit=emit,
-        motion_toggle=lambda x: motion_toggle(x),
     )
     motion = d_params.get("uses_motion", True) and conf.get("imu", True)
-    gyro_on_demand = d_params.get("gyro_on_demand", False)
 
     # Imu
     d_imu = CombinedImu(
@@ -188,44 +185,12 @@ def controller_loop(
     try:
         # d_vend.open()
         prepare(d_xinput)
-        motion_fds = []
-        if motion and d_imu:
-            def motion_toggle(enabled):
-                nonlocal motion
-                nonlocal motion_fds
-                try:
-                    if enabled:
-                        if motion_fds:
-                            return
-                        start_imu = True
-                        if dconf.get("hrtimer", False):
-                            start_imu = d_timer.open()
-                        if start_imu:
-                            # expand prepare(d_imu)
-                            devs.append(d_imu)
-                            motion_fds = d_imu.open()
-                            fds.extend(motion_fds)
-                            for f in motion_fds:
-                                fd_to_dev[f] = d_imu
-                    else:
-                        if not motion_fds:
-                            return
-                        for f in motion_fds:
-                            fd_to_dev.pop(f)
-                            fds.remove(f)
-                        motion_fds = []
-                        d_imu.close(False)
-                        d_timer.close()
-                except Exception as e:
-                    motion = False
-                    motion_fds = []
-                    try:
-                        d_timer.close()
-                    except Exception:
-                        pass
-                    logger.error(f"Failed to {'open' if enabled else 'close'} IMU, disabling motion support. Error: {e}")
-            if not gyro_on_demand:
-                motion_toggle(True)
+        if motion:
+            start_imu = True
+            if dconf.get("hrtimer", False):
+                start_imu = d_timer.open()
+            if start_imu:
+                prepare(d_imu)
         prepare(d_kbd_1)
         prepare(d_kbd_2)
         for d in d_producers:
