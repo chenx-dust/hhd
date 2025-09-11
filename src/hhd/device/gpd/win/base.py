@@ -182,6 +182,8 @@ def plugin_run(
             init = time.perf_counter()
             controller_loop(conf.copy(), should_exit, updated, dconf, emit)
             repeated_fail = False
+        except StopIteration:   # Have to change all device driver
+            pass
         except Exception as e:
             failed_fast = init + LONGER_ERROR_MARGIN > time.perf_counter()
             sleep_time = (

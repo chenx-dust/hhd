@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import defaultdict
-from typing import Callable, Sequence, cast
+from typing import Sequence, cast
 
 from hhd.controller import (
     Consumer,
@@ -28,6 +28,7 @@ MAX_IMU_SYNC_DELAY = 2
 logger = logging.getLogger(__name__)
 
 _cache = ControllerCache()
+_gyro_enabled = False
 
 
 def trim(rep: bytes):
@@ -47,6 +48,9 @@ class SteamdeckController(Producer, Consumer):
     @staticmethod
     def close_cached():
         _cache.close()
+    @staticmethod
+    def gyro_enabled() -> bool:
+        return _gyro_enabled
 
     def __init__(
         self,
@@ -54,7 +58,6 @@ class SteamdeckController(Producer, Consumer):
         name,
         touchpad: bool = False,
         sync_gyro: bool = True,
-        motion_toggle: Callable[[bool], None] | None = None,
     ) -> None:
         self.available = False
         self.dev = None
@@ -63,7 +66,6 @@ class SteamdeckController(Producer, Consumer):
         self.name = name
         self.sync_gyro = sync_gyro
         self.enable_touchpad = touchpad
-        self.motion_toggle = motion_toggle
         self.report = bytearray(64)
         self.i = 0
         self.last_rep = None
@@ -114,7 +116,7 @@ class SteamdeckController(Producer, Consumer):
         self.start = curr
         self.touchpad_down = curr
         self.last_imu = curr
-        self.imu_failed = True
+        self.imu_failed = False
 
         logger.info(f"Starting '{self.name}'.")
         assert self.fd
@@ -259,21 +261,17 @@ class SteamdeckController(Producer, Consumer):
                                     signed=False,
                                 )
                             # SETTING_STABILIZER_ENABLED
-                            if self.motion_toggle and rtype == 80:
+                            if rtype == 80:
+                                global _gyro_enabled
                                 match rdata:
                                     case 0xaa00:
-                                        if DEBUG_MODE:
-                                            logger.info("IMU activated")
-                                        self.motion_toggle(True)
+                                        _gyro_enabled = True
                                     case 0xbb00:
-                                        if DEBUG_MODE:
-                                            logger.info("IMU deactivated")
-                                        self.motion_toggle(False)
-                                        # Force breaking gyro sync to prevent controller freeze
-                                        self.last_imu = time.perf_counter() - MAX_IMU_SYNC_DELAY
-                                        self.imu_failed = True
+                                        _gyro_enabled = False
                                     case _:
                                         logger.warning(f"SD Unknown stabilizer enabled setting: {rdata:02x}")
+                                logger.info(f"SD gyro_enabled: {_gyro_enabled}")
+                                raise StopIteration
                             if DEBUG_MODE:
                                 ss = []
                                 for i in range(0, rnum, 3):
@@ -374,7 +372,7 @@ class SteamdeckController(Producer, Consumer):
 
         # If the IMU breaks, smoothly re-enable the controller
         failover = self.last_imu + MAX_IMU_SYNC_DELAY < curr
-        if self.sync_gyro and failover and not self.imu_failed:
+        if _gyro_enabled and self.sync_gyro and failover and not self.imu_failed:
             self.imu_failed = True
             logger.error(
                 f"IMU Did not send information for {MAX_IMU_SYNC_DELAY}s. Disabling Gyro Sync."

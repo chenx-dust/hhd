@@ -43,7 +43,6 @@ def get_outputs(
     touchpad_enable: Literal["disabled", "gamemode", "always"] | None = None,
     rgb_init_times: int | None = None,
     extra_buttons: Literal["none", "dual", "quad"] = "dual",
-    motion_toggle: Callable[[bool], None] | None = None,
 ) -> tuple[Sequence[Producer], Sequence[Consumer], Mapping[str, Any]]:
     producers = []
     consumers = []
@@ -137,12 +136,13 @@ def get_outputs(
                 pid=0x12FF,
                 touchpad=uses_touch,
                 sync_gyro=conf.get("hori_steam.sync_gyro", True),
-                motion_toggle=motion_toggle,
             )
             producers.append(d)
             consumers.append(d)
             noob_mode = conf.get("hori_steam.noob_mode", False)
             gyro_on_demand = conf.get("hori_steam.gyro_on_demand", False)
+            if motion and gyro_on_demand and not SteamdeckController.gyro_enabled:
+                motion = False
             has_qam = True
         case "uinput" | "xbox_elite" | "joycon_pair" | "hori_steam":
             Dualsense.close_cached()
