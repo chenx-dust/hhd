@@ -9,7 +9,7 @@ from hhd.utils import expanduser
 
 from ..plugin import open_steam_kbd
 from .const import get_system_info, get_touchscreen_quirk
-from .controllers import QamHandlerKeyboard, device_shortcut_loop, has_touchscreen
+from .controllers import QamHandlerKeyboard, QamHandlerGamepad, device_shortcut_loop, has_touchscreen
 from .steam import get_games
 from .x11 import is_gamescope_running
 
@@ -101,13 +101,16 @@ class OverlayPlugin(HHDPlugin):
             elif bool(os.environ.get("HHD_QAM_GAMESCOPE", None)):
                 # Sends X11 events to gamescope. Stopped working after libei
                 self.qam_handler = QamHandlerGamescope(context)
+            elif bool(os.environ.get("HHD_QAM_GAMEPAD", None)):
+                # Sends gamepad button
+                self.qam_handler = QamHandlerGamepad(emit)
             else:
                 self.qam_handler = None
 
             if self.qam_handler:
                 emit.register_qam(self.qam_handler)
             else:
-                self.qam_handler_fallback = QamHandlerKeyboard()
+                self.qam_handler_fallback = QamHandlerGamepad(emit)
             self.emit = emit
         except Exception as e:
             logger.warning(

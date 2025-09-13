@@ -12,6 +12,7 @@ import stat
 from evdev import InputDevice
 
 from hhd.controller import Event as ControllerEvent
+from hhd.controller.base import ButtonEvent, ControllerEmitter
 from hhd.controller.lib.ioctl import EVIOCSMASK, EVIOCGRAB
 from hhd.controller.physical.evdev import B, list_evs, to_map
 from hhd.controller.virtual.uinput.monkey import UInput, UInputMonkey
@@ -181,6 +182,25 @@ class QamHandlerKeyboard:
             self.uinput.close()
             self.uinput = None
 
+class QamHandlerGamepad:
+    def __init__(self, emit: ControllerEmitter) -> None:
+        self.emit = emit
+
+    def __call__(self, expanded=False) -> Any:
+        ev_push: ButtonEvent = {
+            "type": "button",
+            "code": "mode" if expanded else "share",
+            "value": True,
+        }
+        ev_release: ButtonEvent = {
+            "type": "button",
+            "code": "mode" if expanded else "share",
+            "value": False,
+        }
+        self.emit.inject([ev_push, ev_release])
+
+    def close(self):
+        return
 
 def grab_buttons(fd: int, typ: int, btns: Iterable[int] | None):
     if btns:
