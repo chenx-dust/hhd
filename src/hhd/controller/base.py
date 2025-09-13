@@ -1305,7 +1305,16 @@ class Multiplexer:
                         and ev["code"] == "y"
                         and ev["value"]
                     ):
-                        self.emit({"type": "special", "event": "xbox_y_internal"})
+                        self.emit({"type": "special", "event": "xbox_y"})
+
+                    # Assume we own Xbox + A if the user is not able to trigger QAM
+                    if (
+                        (self.guide_pressed or self.select_is_held)
+                        and self.emit
+                        and ev["code"] == "a"
+                        and ev["value"]
+                    ):
+                        self.emit({"type": "special", "event": "xbox_a"})
 
                     # Assume we can only use Xbox + B for short presses
                     if (
@@ -1320,7 +1329,7 @@ class Multiplexer:
                                 self.send_xbox_b
                                 and time.time() - self.send_xbox_b < 0.3
                             ):
-                                self.emit({"type": "special", "event": "xbox_b_internal"})
+                                self.emit({"type": "special", "event": "xbox_b"})
                             self.send_xbox_b = None
 
                     # Apply start/select qam
