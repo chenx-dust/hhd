@@ -265,16 +265,25 @@ class SteamdeckController(Producer, Consumer):
                                     global _gyro_enabled
                                     match rdata:
                                         case 0xaa00:
-                                            _gyro_enabled = True
+                                            new_gyro_enabled = True
                                         case 0xbb00:
-                                            _gyro_enabled = False
+                                            new_gyro_enabled = False
                                         case _:
                                             logger.warning(f"SD Unknown stabilizer enabled setting: {rdata:02x}")
-                                    logger.info(f"SD gyro_enabled: {_gyro_enabled}")
-                                    raise StopIteration
+                                            continue
+                                    if new_gyro_enabled != _gyro_enabled:
+                                        _gyro_enabled = new_gyro_enabled
+                                        logger.info(f"SD gyro_enabled: {_gyro_enabled}")
+                                        raise StopIteration
                             if DEBUG_MODE:
                                 ss = []
                                 for i in range(0, rnum, 3):
+                                    rtype = ev["data"][5 + i]
+                                    rdata = int.from_bytes(
+                                        ev["data"][6 + i : 8 + i],
+                                        byteorder="little",
+                                        signed=False,
+                                    )
                                     ss.append(
                                         f"{SD_SETTINGS[rtype] if rtype < len(SD_SETTINGS) else "UKNOWN"} ({rtype:02d}): {rdata:02x}"
                                     )
