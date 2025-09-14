@@ -64,6 +64,9 @@ class SpecialEvent(TypedDict):
         "restart_dev",
         "shutdown_dev",
         "refresh",
+        # Toggle IMU
+        "imu_enable",
+        "imu_disable",
     ]
     data: "NotRequired[Any]"
 

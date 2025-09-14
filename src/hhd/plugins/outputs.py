@@ -131,18 +131,20 @@ def get_outputs(
             UInputDevice.close_cached()
             Dualsense.close_cached()
             uses_touch = touchpad == "controller" and steam_check is not False
+            gyro_on_demand = conf.get("hori_steam.gyro_on_demand", False)
+            gyro_active = conf.get("hori_steam.gyro_active", False)
+            if motion and gyro_on_demand and not gyro_active:
+                motion = False
             d = SteamdeckController(
                 name="Steam Controller (HHD)",
                 pid=0x12FF,
                 touchpad=uses_touch,
-                sync_gyro=conf.get("hori_steam.sync_gyro", True),
+                sync_gyro=conf.get("hori_steam.sync_gyro", True) and motion,
+                emit=emit,
             )
             producers.append(d)
             consumers.append(d)
             noob_mode = conf.get("hori_steam.noob_mode", False)
-            gyro_on_demand = conf.get("hori_steam.gyro_on_demand", False)
-            if motion and gyro_on_demand and not SteamdeckController.gyro_enabled:
-                motion = False
             has_qam = True
         case "uinput" | "xbox_elite" | "joycon_pair" | "hori_steam":
             Dualsense.close_cached()
@@ -281,7 +283,6 @@ def get_outputs(
             "nintendo_qam": nintendo_qam,
             "uses_motion": motion,
             "uses_dual_motion": dual_motion,
-            "gyro_on_demand": gyro_on_demand,
             "noob_mode": noob_mode,
             "has_qam": has_qam,
             "supports_qam": not controller_disabled and controller != "hidden",

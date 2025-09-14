@@ -9,9 +9,11 @@ from hhd.controller import (
     Producer,
     DEBUG_MODE,
 )
+from hhd.controller.base import SpecialEvent
 from hhd.controller.lib.uhid import UhidDevice, BUS_USB
 from hhd.controller.lib.common import encode_axis, set_button
 from hhd.controller.lib.ccache import ControllerCache
+from hhd.plugins.plugin import Emitter
 
 from .const import (
     SDCONT_VENDOR,
@@ -28,7 +30,6 @@ MAX_IMU_SYNC_DELAY = 2
 logger = logging.getLogger(__name__)
 
 _cache = ControllerCache()
-_gyro_enabled = False
 
 
 def trim(rep: bytes):
@@ -48,9 +49,6 @@ class SteamdeckController(Producer, Consumer):
     @staticmethod
     def close_cached():
         _cache.close()
-    @staticmethod
-    def gyro_enabled() -> bool:
-        return _gyro_enabled
 
     def __init__(
         self,
@@ -58,6 +56,7 @@ class SteamdeckController(Producer, Consumer):
         name,
         touchpad: bool = False,
         sync_gyro: bool = True,
+        emit: Emitter | None = None,
     ) -> None:
         self.available = False
         self.dev = None
@@ -69,6 +68,7 @@ class SteamdeckController(Producer, Consumer):
         self.report = bytearray(64)
         self.i = 0
         self.last_rep = None
+        self.emit = emit
 
     def open(self) -> Sequence[int]:
         self.available = False
@@ -262,19 +262,21 @@ class SteamdeckController(Producer, Consumer):
                                 )
                                 # SETTING_STABILIZER_ENABLED
                                 if rtype == 80:
-                                    global _gyro_enabled
+                                    gyro_enabled = None
                                     match rdata:
                                         case 0xaa00:
-                                            new_gyro_enabled = True
+                                            gyro_enabled = True
                                         case 0xbb00:
-                                            new_gyro_enabled = False
+                                            gyro_enabled = False
                                         case _:
                                             logger.warning(f"SD Unknown stabilizer enabled setting: {rdata:02x}")
                                             continue
-                                    if new_gyro_enabled != _gyro_enabled:
-                                        _gyro_enabled = new_gyro_enabled
-                                        logger.info(f"SD gyro_enabled: {_gyro_enabled}")
-                                        raise StopIteration
+                                    if isinstance(gyro_enabled, bool):
+                                        logger.info(f"SD gyro_enabled: {gyro_enabled}")
+                                        imu_ev: SpecialEvent = {"type": "special", "event": "imu_enable" if gyro_enabled else "imu_disable"}
+                                        if self.emit:
+                                            self.emit(imu_ev)
+
                             if DEBUG_MODE:
                                 ss = []
                                 for i in range(0, rnum, 3):
@@ -381,7 +383,7 @@ class SteamdeckController(Producer, Consumer):
 
         # If the IMU breaks, smoothly re-enable the controller
         failover = self.last_imu + MAX_IMU_SYNC_DELAY < curr
-        if _gyro_enabled and self.sync_gyro and failover and not self.imu_failed:
+        if self.sync_gyro and failover and not self.imu_failed:
             self.imu_failed = True
             logger.error(
                 f"IMU Did not send information for {MAX_IMU_SYNC_DELAY}s. Disabling Gyro Sync."

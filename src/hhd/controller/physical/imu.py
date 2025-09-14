@@ -77,8 +77,7 @@ def find_sensor(sensors: Sequence[str]):
             name = f.read().strip()
 
         if any(sensor in name for sensor in sensors):
-            if DEBUG_MODE:
-                logger.info(f"Found device '{name}' at\n{sensor_dir}")
+            logger.info(f"Found device '{name}' at\n{sensor_dir}")
             return sensor_dir, name
 
     return None, None

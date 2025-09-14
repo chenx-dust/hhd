@@ -599,6 +599,12 @@ def main():
                             should_exit.set()
                             # Trigger restart
                             updated = True
+                        elif ev["event"] == "imu_enable":
+                            for controller in conf.get("controllers", []):
+                                conf[f"controllers.{controller}.controller_mode.hori_steam.gyro_active"] = True
+                        elif ev["event"] == "imu_disable":
+                            for controller in conf.get("controllers", []):
+                                conf[f"controllers.{controller}.controller_mode.hori_steam.gyro_active"] = False
                     case "acpi" | "tdp" | "ppd" | "energy":
                         pass
                     case other:
